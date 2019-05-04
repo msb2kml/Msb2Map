@@ -6,8 +6,8 @@ android {
         applicationId 'org.js.Msb2Map'
         minSdkVersion 16
         targetSdkVersion 26
-        versionCode 10
-        versionName 'Initial Release'
+        versionCode 11
+        versionName 'Addition of colored tail of locations'
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
     buildTypes {

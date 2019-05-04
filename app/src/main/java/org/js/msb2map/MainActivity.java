@@ -8,6 +8,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.graphics.Paint;
 import android.location.Location;
 import android.os.Build;
 import android.os.Environment;
@@ -28,9 +30,11 @@ import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.CopyrightOverlay;
 import org.osmdroid.views.overlay.Marker;
+import org.osmdroid.views.overlay.Polyline;
 import org.osmdroid.views.overlay.ScaleBarOverlay;
 import org.osmdroid.views.overlay.gestures.RotationGestureOverlay;
 
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
@@ -54,6 +58,8 @@ public class MainActivity extends AppCompatActivity {
     Button bMsb2And;
     TextView vInfo;
     String caller=null;
+    GeoPoint prevGeoPt=null;
+    LinkedList<Polyline> listLine=new LinkedList<>();
 
 
     @Override
@@ -179,7 +185,7 @@ public class MainActivity extends AppCompatActivity {
         listening=true;
     }
 
-    public void update(Location loc, String bubble){
+    public void update(Location loc, Integer color, String bubble){
         GeoPoint gp=new GeoPoint(loc.getLatitude(),loc.getLongitude());
         if (flyMarker!=null) flyMarker.remove(map);
         flyMarker=new Marker(map);
@@ -196,6 +202,20 @@ public class MainActivity extends AppCompatActivity {
         flyMarker.setPosition(gp);
         map.getOverlays().add(flyMarker);
         mapController.setCenter(gp);
+        if (prevGeoPt!=null){
+            Polyline poly=new Polyline(map);
+            poly.addPoint(prevGeoPt);
+            poly.addPoint(gp);
+            poly.getPaint().setStrokeCap(Paint.Cap.ROUND);
+            if (color!=null) poly.setColor(color);
+            listLine.addFirst(poly);
+            map.getOverlays().add(poly);
+            if (listLine.size()>20){
+                Polyline rm=listLine.removeLast();
+                map.getOverlays().remove(rm);
+            }
+        }
+        prevGeoPt=gp;
         map.invalidate();
         if (bubble!=null) {
             vInfo.setText(bubble);
@@ -207,7 +227,8 @@ public class MainActivity extends AppCompatActivity {
         public void onReceive(Context context, Intent intent) {
             Location loc=(Location) intent.getParcelableExtra("LOC");
             String bubble=intent.getStringExtra("BUBBLE");
-            if (loc!=null) update(loc,bubble);
+            Integer color=intent.getIntExtra("COLOR",Color.BLACK);
+            if (loc!=null) update(loc,color,bubble);
         }
     };
 }

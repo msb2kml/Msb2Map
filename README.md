@@ -7,7 +7,8 @@ The minimum version of Msb2And is 1.2.
 
 # Installation
 The application should be compiled from the sources in this repository
-or downloaded from the "**Releases**" pages.
+or downloaded from the [Releases](https://github.com/msb2kml/Msb2Map/releases)
+pages.
 
 You need to have authorized the installation of applications from other sources than Google Play.
 
@@ -47,6 +48,12 @@ The current location of the plane is noted as a marker with a form
 of reticule and the map is kept centered on this marker.  
 The information field show the value of the parameter that has
 been associated by Msb2And.
+ 
+A tail (or "ribbon") is drawn behind the current location. It covers
+20 previous locations and its default color is black.  
+The application "**Msb2And**" could give a colour to each segment
+from the value of the parameter named "**%**" computed with
+the function "**=COL**".
 
 # Getting the map
 The tiles composing the map are downloaded from the server of the
