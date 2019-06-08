@@ -6,8 +6,8 @@ android {
         applicationId 'org.js.Msb2Map'
         minSdkVersion 16
         targetSdkVersion 26
-        versionCode 11
-        versionName 'Addition of colored tail of locations'
+        versionCode 12
+        versionName 'Use topo map'
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
     buildTypes {

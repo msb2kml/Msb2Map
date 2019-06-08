@@ -143,7 +143,7 @@ public class MainActivity extends AppCompatActivity {
                 launchMsb2And();
             }
         });
-        map.setTileSource(TileSourceFactory.MAPNIK);
+        map.setTileSource(TileSourceFactory.OpenTopo);
         Configuration.getInstance().setUserAgentValue(BuildConfig.APPLICATION_ID);
         RotationGestureOverlay mRotationGestureOverlay = new RotationGestureOverlay(map);
         mRotationGestureOverlay.setEnabled(true);
@@ -206,6 +206,7 @@ public class MainActivity extends AppCompatActivity {
             Polyline poly=new Polyline(map);
             poly.addPoint(prevGeoPt);
             poly.addPoint(gp);
+            poly.setWidth(8.0f);
             poly.getPaint().setStrokeCap(Paint.Cap.ROUND);
             if (color!=null) poly.setColor(color);
             listLine.addFirst(poly);
