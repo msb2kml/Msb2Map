@@ -6,8 +6,8 @@ android {
         applicationId 'org.js.Msb2Map'
         minSdkVersion 16
         targetSdkVersion 26
-        versionCode 12
-        versionName 'Use topo map'
+        versionCode 13
+        versionName 'Full track and protocol extension'
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
     buildTypes {

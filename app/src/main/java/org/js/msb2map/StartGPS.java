@@ -323,7 +323,4 @@ public class StartGPS {
         return  result;
     }
 
-
-
-
 }

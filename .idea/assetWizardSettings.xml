@@ -24,6 +24,7 @@
                                             <option name="values">
                                               <map>
                                                 <entry key="color" value="ff0000" />
+                                                <entry key="scalingPercent" value="134" />
                                               </map>
                                             </option>
                                           </PersistentState>
@@ -34,7 +35,7 @@
                                           <PersistentState>
                                             <option name="values">
                                               <map>
-                                                <entry key="fontFamily" value="Century Schoolbook L" />
+                                                <entry key="fontFamily" value="padmaa-Bold.1.1" />
                                                 <entry key="text" value="M/M" />
                                               </map>
                                             </option>
@@ -45,8 +46,8 @@
                                   </option>
                                   <option name="values">
                                     <map>
-                                      <entry key="backgroundAssetType" value="COLOR" />
                                       <entry key="backgroundColor" value="56ab5a" />
+                                      <entry key="backgroundImage" value="$PROJECT_DIR$/app/src/main/res/drawable/color_gradient.xml" />
                                       <entry key="foregroundAssetType" value="TEXT" />
                                     </map>
                                   </option>

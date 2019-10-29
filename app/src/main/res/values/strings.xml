@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Msb2Map</string>
+    <string name="PrefName">Msb2Map</string>
 </resources>
