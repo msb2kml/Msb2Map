@@ -1,8 +1,10 @@
 # Purpose
 The Msb2Map Android application is designed to display
-a GPS track on a map. It is typically launched and driven
-by another application like [Msb2And](https://github.com/msb2kml/Msb2And)
-or [Msb2Kml](https://github.com/msb2kml/Msb2Kml).
+some GPS track, route and waypoint on a map background.
+It is typically launched and driven
+by another application like [Msb2And](https://github.com/msb2kml/Msb2And),
+[Msb2Kml](https://github.com/msb2kml/Msb2Kml) or
+[Vtrk](https://github.com/msb2kml/Vtrk).
 
 # Installation
 The application should be compiled from the sources in this repository
@@ -54,15 +56,16 @@ the application and returns to the calling application.
 There is an information field on the left of this button.  
 The application is not affected by the rotation of the screen.
 
-# Track mode
-The track is displayed as a succession of segments that could have
+# Track and route mode
+A track or route is displayed as a succession of segments that could have
 each a different color. 
 There are two possible modes:
 
-+ Entire track: the complete track is displayed at once.
-+ Vapor trail: the points along the track are displayed as they
++ Entire track: the complete line is displayed at once.
++ Vapor trail: the points along the line are displayed as they
  are received. The most recent location is noted as a marker with
  the form of a reticle. The map is kept centered on this marker.
+ Taping on the reticle shows a bubble with the altitude.
  Points older than the 20 last locations are erased.
 
 # Standalone
@@ -77,7 +80,12 @@ Jelly Bean (4.1) to Oreo (8.0).
 It need access to the Internet and to the storage.  
 Access to the location service (GPS) is not needed.
 
-# Screenshot
+# Screenshots
+Track in vapor trail mode and waypoints.
 
 ![Msb2Map.jpg](Msb2Map.jpg)
+
+Route and waypoints.
+
+![RouteAndWpt.jpg](RouteAndWpt.jpg)
 

@@ -1,18 +1,17 @@
 package org.js.msb2map;
 
 import android.Manifest;
-import android.app.ActivityManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
-import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.location.Location;
+import android.os.Build;
 import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.support.v4.app.ActivityCompat;
@@ -37,6 +36,7 @@ import org.osmdroid.views.overlay.ScaleBarOverlay;
 import org.osmdroid.views.overlay.gestures.RotationGestureOverlay;
 
 import java.util.LinkedList;
+import java.util.Locale;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -54,6 +54,8 @@ public class MainActivity extends AppCompatActivity {
     Location center=null;
     String pathStartGPS=exPath+"/MSBlog/StartGPS.gpx";
     Marker flyMarker=null;
+    GeoPoint geo=null;
+    Marker mark=null;
     IMapController mapController=null;
     IntentFilter filter=new IntentFilter("org.js.LOC");
     Boolean listening=false;
@@ -148,12 +150,22 @@ public class MainActivity extends AppCompatActivity {
 
     public void onResume(){
         super.onResume();
+        if (map!=null) map.onResume();
         if (listening) registerReceiver(mReceiver,filter);
     }
 
     public void onPause(){
         super.onPause();
+        if (map!=null) map.onPause();
         if (listening) unregisterReceiver(mReceiver);
+    }
+
+    public void onDestroy(){
+        super.onDestroy();
+        if (listening){
+            unregisterReceiver(mReceiver);
+            listening=false;
+        }
     }
 
     public void launchMsb2And(){
@@ -163,8 +175,14 @@ public class MainActivity extends AppCompatActivity {
             latitude=cntr.getLatitude();
             longitude=cntr.getLongitude();
             putPref();
+            map.getOverlays().clear();
+            map=null;
         }
-        finish();
+        if (listening) unregisterReceiver(mReceiver);
+        listening=false;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP){
+            finishAndRemoveTask();
+        } else finish();
     }
 
     public void strtMap(){
@@ -189,6 +207,7 @@ public class MainActivity extends AppCompatActivity {
         RotationGestureOverlay mRotationGestureOverlay = new RotationGestureOverlay(map);
         mRotationGestureOverlay.setEnabled(true);
         map.setMultiTouchControls(true);
+        map.getOverlays().clear();
         map.getOverlays().add(mRotationGestureOverlay);
         map.getOverlays().add(new CopyrightOverlay(ctx));
         mapController = map.getController();
@@ -232,34 +251,48 @@ public class MainActivity extends AppCompatActivity {
         sendBroadcast(nt);
     }
 
-    public void wpt(Location loc, String name){
+    public void wpt(Location loc, String name, String bubble){
         Double lat=loc.getLatitude();
         Double lon=loc.getLongitude();
-        Marker m=new Marker(map);
-        if (name!=null) m.setTitle(name);
-        m.setIcon(getResources().getDrawable(R.drawable.diabolo));
-        m.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER);
-        m.setPosition(new GeoPoint(lat, lon));
-        map.getOverlays().add(m);
-        map.invalidate();
+        String iname=new String(name);
+        geo=new GeoPoint(lat,lon);
+        mark=new Marker(map);
+        mark.setIcon(getResources().getDrawable(R.drawable.diabolo));
+        mark.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER);
+        mark.setPosition(geo);
+        if (name!=null) {
+            mark.setTitle(new String(name));
+        }
+        map.getOverlayManager().add(mark);
+        if (bubble!=null) {
+            vInfo.setText(bubble);
+        }
     }
 
-    public void update(Location loc, Integer color, String bubble){
+    public void update(Location loc, Integer color, String bubble,
+                       Boolean startPt, Boolean tail){
+        Boolean wthInf=false;
         GeoPoint gp=new GeoPoint(loc.getLatitude(),loc.getLongitude());
+        if (startPt){
+            prevGeoPt=null;
+            Tail=tail;
+        }
+        if (flyMarker!=null){
+            wthInf=flyMarker.isInfoWindowShown();
+            if (wthInf) flyMarker.closeInfoWindow();
+            flyMarker.remove(map);
+            flyMarker=null;
+        }
         if (Tail) {
-            if (flyMarker != null) flyMarker.remove(map);
             flyMarker = new Marker(map);
             flyMarker.setIcon(getResources().getDrawable(R.drawable.target));
             flyMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER);
             flyMarker.setPosition(gp);
-            if (flyMarker == null) {
-                flyMarker = new Marker(map);
-                flyMarker.setIcon(getResources().getDrawable(R.drawable.target));
-                flyMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER);
-                flyMarker.setPosition(gp);
-                map.getOverlays().add(flyMarker);
+            if (loc.hasAltitude()){
+                String alt=String.format(Locale.ENGLISH,"%.1f",loc.getAltitude());
+                flyMarker.setTitle(alt);
+                if (wthInf) flyMarker.showInfoWindow();
             }
-            flyMarker.setPosition(gp);
             map.getOverlays().add(flyMarker);
             mapController.setCenter(gp);
         }
@@ -267,9 +300,15 @@ public class MainActivity extends AppCompatActivity {
             Polyline poly=new Polyline(map);
             poly.addPoint(prevGeoPt);
             poly.addPoint(gp);
-            poly.setWidth(width);
-            poly.getPaint().setStrokeCap(Paint.Cap.ROUND);
-            if (color!=null) poly.setColor(color);
+            poly.getOutlinePaint().setStrokeWidth(width);
+            poly.getOutlinePaint().setStrokeCap(Paint.Cap.ROUND);
+            if (color!=null) poly.getOutlinePaint().setColor(color);
+            poly.setOnClickListener(new Polyline.OnClickListener() {
+                @Override
+                public boolean onClick(Polyline polyline, MapView mapView, GeoPoint geoPoint) {
+                    return false;
+                }
+            });
             map.getOverlays().add(poly);
             if (Tail) {
                 listLine.addFirst(poly);
@@ -280,7 +319,6 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         prevGeoPt=gp;
-        map.invalidate();
         if (bubble!=null) {
             vInfo.setText(bubble);
         }
@@ -289,16 +327,21 @@ public class MainActivity extends AppCompatActivity {
     private final BroadcastReceiver mReceiver=new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
+            if (!listening) return;
             Location loc=(Location) intent.getParcelableExtra("LOC");
             if (loc!=null) {
                 String bubble = intent.getStringExtra("BUBBLE");
                 Integer color = intent.getIntExtra("COLOR", Color.BLACK);
-                update(loc, color, bubble);
+                Boolean startPt=intent.getBooleanExtra("START",false);
+                Boolean tail=intent.getBooleanExtra("Tail",Tail);
+                update(loc, color, bubble,startPt,tail);
             } else {
                 loc=(Location) intent.getParcelableExtra("WPT");
+                String bubble = intent.getStringExtra("BUBBLE");
                 String name=intent.getStringExtra("WPT_NAME");
-                if (loc!=null) wpt(loc,name);
+                if (loc!=null) wpt(loc,name,bubble);
             }
+            map.invalidate();
         }
     };
 }
