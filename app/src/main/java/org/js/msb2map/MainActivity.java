@@ -3,6 +3,7 @@ package org.js.msb2map;
 import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
@@ -16,17 +17,23 @@ import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import org.osmdroid.api.IGeoPoint;
 import org.osmdroid.api.IMapController;
 import org.osmdroid.config.Configuration;
+import org.osmdroid.events.MapListener;
+import org.osmdroid.events.ScrollEvent;
+import org.osmdroid.events.ZoomEvent;
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
+import org.osmdroid.util.BoundingBox;
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.CopyrightOverlay;
@@ -35,6 +42,10 @@ import org.osmdroid.views.overlay.Polyline;
 import org.osmdroid.views.overlay.ScaleBarOverlay;
 import org.osmdroid.views.overlay.gestures.RotationGestureOverlay;
 
+import java.text.NumberFormat;
+import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Locale;
 import java.util.Map;
@@ -46,7 +57,6 @@ public class MainActivity extends AppCompatActivity {
     MapView map=null;
     Context ctx;
     String exPath= Environment.getExternalStorageDirectory().getAbsolutePath();
-    Marker startMarker;
     Double latitude=48.8583;
     Double longitude=2.2944;
     Double zoom=15.0;
@@ -66,6 +76,18 @@ public class MainActivity extends AppCompatActivity {
     LinkedList<Polyline> listLine=new LinkedList<>();
     Boolean withStart=true;
     Boolean Tail=true;
+    Boolean Picking=false;
+    Boolean pickWpt=false;
+    Marker pick=null;
+    Boolean mvPick=false;
+    int pickNb=0;
+    NumberFormat nfe=NumberFormat.getInstance(Locale.ENGLISH);
+    class DataMark {
+        Integer index;
+        Double altitude;
+    }
+    Map<Marker,DataMark> assocAlt=new HashMap<>();
+    Marker prevMark=null;
 
 
     @Override
@@ -169,6 +191,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void launchMsb2And(){
+
         if (map!=null){
             zoom=map.getZoomLevelDouble();
             IGeoPoint cntr=map.getMapCenter();
@@ -243,6 +266,7 @@ public class MainActivity extends AppCompatActivity {
         scale.setUnitsOfMeasure(ScaleBarOverlay.UnitsOfMeasure.metric);
         map.getOverlays().add(scale);
         map.invalidate();
+
         Intent nt=new Intent();
         nt.setAction("org.js.ACK");
         nt.putExtra("NAME",getResources().getString(R.string.app_name));
@@ -337,11 +361,274 @@ public class MainActivity extends AppCompatActivity {
                 update(loc, color, bubble,startPt,tail);
             } else {
                 loc=(Location) intent.getParcelableExtra("WPT");
-                String bubble = intent.getStringExtra("BUBBLE");
-                String name=intent.getStringExtra("WPT_NAME");
-                if (loc!=null) wpt(loc,name,bubble);
+                if (loc!=null) {
+                    String bubble = intent.getStringExtra("BUBBLE");
+                    String name = intent.getStringExtra("WPT_NAME");
+                    wpt(loc, name, bubble);
+                } else {
+                    Picking=intent.getBooleanExtra("PICKING",false);
+                    pickWpt=intent.getBooleanExtra("PICKWPT",false);
+                    initPick();
+                }
             }
             map.invalidate();
         }
     };
+
+    MapListener mapLstnr=new MapListener() {
+        @Override
+        public boolean onScroll(ScrollEvent scrollEvent) {
+            if (pick==null) mkPkMe();
+            else {
+                BoundingBox bb=map.getBoundingBox();
+                if (bb.contains(pick.getPosition())) return false;
+                GeoPoint corner=bb.getGeoPointOfRelativePositionWithLinearInterpolation(
+//                                0.75f,0.25f);
+                        0.25f,0.75f);
+                pick.setPosition(corner);
+            }
+            return false;
+        }
+
+        @Override
+        public boolean onZoom(ZoomEvent zoomEvent) {
+            if (pick==null) mkPkMe();
+            else {
+                BoundingBox bb=map.getBoundingBox();
+                if (bb.contains(pick.getPosition())) return false;
+                GeoPoint corner=bb.getGeoPointOfRelativePositionWithLinearInterpolation(
+//                                0.75f,0.25f);
+                        0.25f,0.75f);
+                pick.setPosition(corner);
+            }
+            return false;
+        }
+    };
+
+    void initPick(){
+        if (Picking){
+            mkPkMe();
+            map.addMapListener(mapLstnr);
+//            vInfo.setText("Latitude,Longitude");
+        } else {
+            map.removeMapListener(mapLstnr);
+            if (pick!=null){
+                map.getOverlays().remove(pick);
+                pick=null;
+            }
+        }
+    }
+
+    void mkPkMe(){
+        if (!map.isLayoutOccurred()) return;
+        BoundingBox bb=map.getBoundingBox();
+        GeoPoint corner=bb.getGeoPointOfRelativePositionWithLinearInterpolation(
+//                0.75f,0.25f);
+                0.25f,0.75f);
+        pick=new Marker(map);
+        pick.setIcon(getResources().getDrawable(R.drawable.target));
+        pick.setAnchor(Marker.ANCHOR_CENTER,Marker.ANCHOR_CENTER);
+        pick.setPosition(corner);
+        pick.setTitle("Pick Me");
+        pick.showInfoWindow();
+        pick.setDraggable(true);
+        pick.setDragOffset(10.0f);
+        pick.setOnMarkerDragListener(new Marker.OnMarkerDragListener() {
+            @Override
+            public void onMarkerDrag(Marker marker) {
+                disInfo(marker);
+            }
+
+            @Override
+            public void onMarkerDragEnd(Marker marker) {
+                BoundingBox bb=map.getBoundingBox();
+                GeoPoint corner=bb.getGeoPointOfRelativePositionWithLinearInterpolation(
+//                          0.75f,0.25f);
+                     0.25f,0.75f);
+                GeoPoint pt=marker.getPosition();
+                nwRteWpt(pt);
+                marker.setPosition(corner);
+                marker.showInfoWindow();
+                map.invalidate();
+                mvPick=false;
+            }
+
+            @Override
+            public void onMarkerDragStart(Marker marker) {
+                prevMark=getPrevMark(pickNb);
+                if (prevMark==null || pickWpt) vInfo.setText("Latitude,Longitude");
+                else vInfo.setText("Bearing,Distance");
+                mvPick=true;
+            }
+
+        });
+        map.getOverlays().add(pick);
+    }
+
+    Marker getPrevMark(Integer curIx){
+        if (curIx<=0) return null;
+        Integer toSearch=curIx-1;
+        for (Marker m : assocAlt.keySet()){
+            DataMark dm=assocAlt.get(m);
+            if (dm.index==toSearch) return m;
+        }
+        return null;
+    }
+
+    void disInfo(Marker m){
+        String info;
+        GeoPoint pt=m.getPosition();
+        if (prevMark==null || pickWpt){
+            info=String.format(Locale.ENGLISH,
+                        "%.6f,%.6f", pt.getLatitude(),pt.getLongitude());
+        } else {
+            Double bearing=prevMark.getPosition().bearingTo(pt);
+            Double dist=pt.distanceToAsDouble(prevMark.getPosition());
+            info=String.format(Locale.ENGLISH,"%.2f,%.1f",bearing,dist);
+        }
+        vInfo.setText(info);
+    }
+
+    void nwRteWpt(GeoPoint pt){
+        Marker nw=new Marker(map);
+        nw.setPosition(pt);
+        nw.setIcon(getResources().getDrawable(R.drawable.butterfly));
+        nw.setAnchor(Marker.ANCHOR_CENTER,Marker.ANCHOR_CENTER);
+        final Integer mkIx=pickNb++;
+        if (pickWpt){
+//            nw.setTitle("Wpt "+mkIx.toString());
+        } else {
+            nw.setTitle("Rte Pt " + mkIx.toString());
+        }
+        DataMark dm=new DataMark();
+        dm.index=mkIx;
+        dm.altitude=null;
+        nw.setDraggable(true);
+        nw.setDragOffset(10.0f);
+        nw.setOnMarkerDragListener(new Marker.OnMarkerDragListener() {
+            @Override
+            public void onMarkerDrag(Marker marker) {
+                disInfo(marker);
+            }
+
+            @Override
+            public void onMarkerDragEnd(Marker marker) {
+                marker.setIcon(getResources().getDrawable(R.drawable.butterfly));
+                sendPicked(marker);
+                map.invalidate();
+            }
+
+            @Override
+            public void onMarkerDragStart(Marker marker) {
+                prevMark=getPrevMark(mkIx);
+                if (prevMark==null || pickWpt) vInfo.setText("Latitude,Longitude");
+                else vInfo.setText("Bearing,Distance");
+                marker.setIcon(getResources().getDrawable(R.drawable.target));
+                map.invalidate();
+            }
+        });
+        assocAlt.put(nw,dm);
+        map.getOverlays().add(nw);
+        sendPicked(nw);
+    }
+
+    void sendPicked(Marker m){
+        if (pickWpt){
+            final Marker curM=m;
+            final GeoPoint gPt=curM.getPosition();
+            final String wptName=curM.getTitle();
+            AlertDialog.Builder builder=new AlertDialog.Builder(this);
+            builder.setTitle("Waypoint detail");
+            View wptDetail=View.inflate(this,R.layout.wpt,null);
+            TextView vLatLon=wptDetail.findViewById(R.id.latlon);
+            final EditText vAlt=wptDetail.findViewById(R.id.wptalt);
+            final EditText vName=wptDetail.findViewById(R.id.wptname);
+            String pos=String.format(Locale.ENGLISH,"Latitude, Longitude: %.6f, %.6f",
+                    gPt.getLatitude(),gPt.getLongitude());
+            final DataMark dm=assocAlt.get(curM);
+            vLatLon.setText(pos);
+            final String defName="Wpt "+assocAlt.get(curM).index.toString();
+            vName.setHint(defName);
+            if (wptName!=null && !wptName.isEmpty()) vName.setText(wptName);
+            if (dm.altitude!=null) vAlt.setText(String.format(Locale.ENGLISH,
+                    "%.2f",dm.altitude));
+            builder.setView(wptDetail);
+            builder.setOnCancelListener(new DialogInterface.OnCancelListener() {
+                @Override
+                public void onCancel(DialogInterface dialog) {
+                    frgtpkd(curM);
+                            map.getOverlays().remove(curM);
+                            map.invalidate();
+                }
+            });
+            builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    String rdName=vName.getText().toString();
+                    if (rdName!=null) rdName=rdName.trim();
+                    if (rdName==null || rdName.isEmpty()){
+                        rdName=defName;
+                    }
+                    String sAlt=vAlt.getText().toString();
+                    if (sAlt!=null) sAlt=sAlt.trim();
+                    Double rdAlt=dm.altitude;
+                    if (sAlt!=null && !sAlt.isEmpty()){
+                        try {
+                            rdAlt=nfe.parse(sAlt).doubleValue();
+
+                        } catch (ParseException e){
+                            rdAlt=dm.altitude;
+                        }
+                    }
+                    curM.setTitle(rdName);
+                    GeoPoint rPt=gPt;
+                    curM.setPosition(rPt);
+                    dm.altitude=rdAlt;
+                    assocAlt.put(curM,dm);
+                    sendpkd(curM);
+                }
+            })
+                    .setNegativeButton("Forget", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            frgtpkd(curM);
+                            map.getOverlays().remove(curM);
+                            map.invalidate();
+                        }
+                    });
+            builder.show();
+        } else {
+            sendpkd(m);
+        }
+    }
+
+
+
+    void sendpkd(Marker m){
+        DataMark dm=assocAlt.get(m);
+        Intent nt=new Intent();
+        nt.setAction("org.js.PICKED");
+        nt.putExtra("INDEX",dm.index);
+        nt.putExtra("NAME",m.getTitle());
+        GeoPoint pt=m.getPosition();
+        Location loc=new Location("");
+        loc.setLatitude(pt.getLatitude());
+        loc.setLongitude(pt.getLongitude());
+        if (dm.altitude!=null) loc.setAltitude(dm.altitude);
+        nt.putExtra("LOC",loc);
+        sendBroadcast(nt);
+    }
+
+    void frgtpkd(Marker m){
+        DataMark dm=assocAlt.get(m);
+        Intent nt=new Intent();
+        nt.setAction("org.js.PICKED");
+        nt.putExtra("INDEX",dm.index);
+        nt.putExtra("NAME",m.getTitle());
+        Location loc=null;
+        nt.putExtra("LOC",loc);
+        sendBroadcast(nt);
+        assocAlt.remove(m);
+    }
+
 }
