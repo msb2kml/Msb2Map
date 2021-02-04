@@ -28,9 +28,9 @@ retaining its identity (same index) for the driving application.
 
 # Waypoints
 
-While a reticle marker for a waypoint is dragged, the information
-field near the exit button shows the latitude and longitude
-of location.
+While a reticle marker for a waypoint is dragged, the marker is 
+accompanied by a bubble showing the latitude and longitude 
+of the location.
 
 Once the final location is attained, a dialog appears to ask for
 a name to be given to the waypoint and its altitude.
@@ -44,15 +44,20 @@ is used.
 
 # Route
 
-While dragging the reticle marker for the first location of route,
+While dragging the reticle marker for the first location of the route,
 the information shown is the same as for an isolated waypoint.  
-For each next point, the information shown is the azimuth from
-the previous point (direction in degrees relative to the north)
-to the moving marker and the distance in meters.
+For each next point, the information shown is composed of
+two parts (example: **13:188.81&deg;,91.1m|0:270.65&deg;,399.8m**).  
+The first part (**13:188.81&deg;,91.1m**) is the bearing and the distance
+from the previous point of the route. The second part
+(**0:270.65&deg;,399.8m**) is the bearing and the distance from the **first**
+point of the route.
 
 No altitude is recorded as a name derived from the index is applied.
 There is thus no dialog.
 
+![Circle400](Gallery/Circle400.jpg)
 
+# Hint
 
- 
+Use a mouse for a better precision.

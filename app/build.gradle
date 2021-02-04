@@ -6,8 +6,6 @@ android {
         applicationId 'org.js.Msb2Map'
         minSdkVersion 16
         targetSdkVersion 26
-        versionCode 15
-        versionName '1.5 Picking'
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
     buildTypes {

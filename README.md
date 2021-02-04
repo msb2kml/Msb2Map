@@ -38,7 +38,7 @@ Foundation.
 # Permission and Android version
 This application should work on Android versions from
 Jelly Bean (4.1) to Oreo (8.0).  
-It need access to the Internet and to the storage.  
+It need access to the Internet.  
 Access to the location service (GPS) is not needed.
 
 # Screenshots

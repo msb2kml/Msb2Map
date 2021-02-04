@@ -44,13 +44,10 @@ import org.osmdroid.views.overlay.gestures.RotationGestureOverlay;
 
 import java.text.NumberFormat;
 import java.text.ParseException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Locale;
 import java.util.Map;
-import java.util.SortedSet;
-import java.util.TreeSet;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -62,7 +59,6 @@ public class MainActivity extends AppCompatActivity {
     Double zoom=15.0;
     Float width=4.0f;
     Location center=null;
-    String pathStartGPS=exPath+"/MSBlog/StartGPS.gpx";
     Marker flyMarker=null;
     GeoPoint geo=null;
     Marker mark=null;
@@ -74,7 +70,6 @@ public class MainActivity extends AppCompatActivity {
     String caller=null;
     GeoPoint prevGeoPt=null;
     LinkedList<Polyline> listLine=new LinkedList<>();
-    Boolean withStart=true;
     Boolean Tail=true;
     Boolean Picking=false;
     Boolean pickWpt=false;
@@ -88,6 +83,7 @@ public class MainActivity extends AppCompatActivity {
     }
     Map<Marker,DataMark> assocAlt=new HashMap<>();
     Marker prevMark=null;
+    Marker frstRteMark=null;
 
 
     @Override
@@ -105,17 +101,13 @@ public class MainActivity extends AppCompatActivity {
             longitude=center.getLongitude();
         }
         zoom=intent.getDoubleExtra("ZOOM",zoom);
-        withStart=intent.getBooleanExtra("StartGPS",withStart);
         Tail=intent.getBooleanExtra("Tail",Tail);
         int wPix = Resources.getSystem().getDisplayMetrics().widthPixels;
         int hPix = Resources.getSystem().getDisplayMetrics().heightPixels;
         if (wPix>1024 || hPix>1024) width=6.0f;
         else width=4.0f;
-        if (withStart) {
-            checkStorage();
-        } else {
-            strtMap();
-        }
+        if (caller!=null) this.setTitle(getString(R.string.app_name)+" : "+caller);
+        strtMap();
     }
 
     void fetchPref(){
@@ -135,39 +127,6 @@ public class MainActivity extends AppCompatActivity {
         edit.putFloat("LATITUDE",latitude.floatValue());
         edit.putFloat("LONGITUDE",longitude.floatValue());
         edit.apply();
-    }
-
-    void checkStorage(){
-        String state=Environment.getExternalStorageState();
-        Boolean montedSD=state.contains(Environment.MEDIA_MOUNTED);
-        if (!montedSD){
-            Toast.makeText(ctx,exPath+" not mounted!",Toast.LENGTH_LONG).show();
-            finish();
-        }
-        Boolean writeSD=!Environment.MEDIA_MOUNTED_READ_ONLY.equals(state);
-        if (!writeSD){
-            Toast.makeText(ctx,exPath+" not writable.",Toast.LENGTH_LONG).show();
-        }
-        Boolean hasPermission=(ContextCompat.checkSelfPermission(ctx,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE)==PackageManager.PERMISSION_GRANTED);
-        if (!hasPermission){
-            Toast.makeText(ctx,"This application need to read "+exPath+".",Toast.LENGTH_LONG).show();
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},1);
-        } else strtMap();
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int reqCode, String[] permissions,int[] grantResults){
-        super.onRequestPermissionsResult(reqCode,permissions,grantResults);
-        if (reqCode==1){
-            if (grantResults.length>0 && grantResults[0]==PackageManager.PERMISSION_GRANTED){
-                strtMap();
-            } else {
-                Toast.makeText(ctx,"Not granted!",Toast.LENGTH_LONG).show();
-                finish();
-            }
-        }
     }
 
     public void onResume(){
@@ -209,8 +168,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void strtMap(){
-        StartGPS sg;
-        Map<String,Location> startPt;
         map=(MapView) findViewById(R.id.map);
         bMsb2And=(Button) findViewById(R.id.msb2and);
         vInfo=(TextView) findViewById(R.id.vInfo);
@@ -234,32 +191,6 @@ public class MainActivity extends AppCompatActivity {
         map.getOverlays().add(mRotationGestureOverlay);
         map.getOverlays().add(new CopyrightOverlay(ctx));
         mapController = map.getController();
-        sg=new StartGPS(pathStartGPS);
-        Integer nPt=0;
-        if (withStart) {
-            startPt = sg.readSG();
-            if (!startPt.isEmpty()) {
-                SortedSet<String> keys = new TreeSet<>();
-                keys.addAll(startPt.keySet());
-                for (String here : keys) {
-                    if (center == null) {
-                        center = startPt.get(here);
-                        latitude = center.getLatitude();
-                        longitude = center.getLongitude();
-                    }
-                    Double lat = startPt.get(here).getLatitude();
-                    Double lon = startPt.get(here).getLongitude();
-                    Marker m = new Marker(map);
-                    m.setIcon(getResources().getDrawable(R.drawable.diabolo));
-                    m.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER);
-                    m.setPosition(new GeoPoint(lat, lon));
-                    m.setTitle(here);
-                    map.getOverlays().add(m);
-                    nPt++;
-                }
-            }
-            vInfo.setText("Nb. Location: "+nPt);
-        }
         mapController.setZoom(zoom);
         mapController.setCenter(new GeoPoint(latitude,longitude));
         ScaleBarOverlay scale=new ScaleBarOverlay(map);
@@ -270,18 +201,48 @@ public class MainActivity extends AppCompatActivity {
         Intent nt=new Intent();
         nt.setAction("org.js.ACK");
         nt.putExtra("NAME",getResources().getString(R.string.app_name));
+        PackageManager pm=getPackageManager();
+        int vc=0;
+        try {
+            vc = pm.getPackageInfo(getPackageName(), 0).versionCode;
+            nt.putExtra("VERSION",vc);
+        } catch (Exception e){
+            vc=0;
+        }
         listening=true;
         registerReceiver(mReceiver,filter);
         sendBroadcast(nt);
     }
 
-    public void wpt(Location loc, String name, String bubble){
+    void mrkTyp(Marker mark, int typ){
+        switch (typ) {
+            case 1:
+                mark.setIcon(getResources().getDrawable(R.drawable.dot));
+                break;
+            case 2:
+                mark.setIcon(getResources().getDrawable(R.drawable.diabolo2));
+                mark.setAlpha(0.5f);
+                break;
+            case 3:
+                mark.setIcon(getResources().getDrawable(R.drawable.butterfly));
+                mark.setAlpha(0.5f);
+                break;
+            case 4:
+                mark.setIcon(getResources().getDrawable(R.drawable.target));
+                break;
+            default:
+                mark.setIcon(getResources().getDrawable(R.drawable.diabolo));
+                mark.setAlpha(0.5f);
+                break;
+        }
+    }
+
+    public void wpt(Location loc, String name, String bubble, int typ){
         Double lat=loc.getLatitude();
         Double lon=loc.getLongitude();
-        String iname=new String(name);
         geo=new GeoPoint(lat,lon);
         mark=new Marker(map);
-        mark.setIcon(getResources().getDrawable(R.drawable.diabolo));
+        mrkTyp(mark,typ);
         mark.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER);
         mark.setPosition(geo);
         if (name!=null) {
@@ -364,7 +325,8 @@ public class MainActivity extends AppCompatActivity {
                 if (loc!=null) {
                     String bubble = intent.getStringExtra("BUBBLE");
                     String name = intent.getStringExtra("WPT_NAME");
-                    wpt(loc, name, bubble);
+                    int typ=intent.getIntExtra("TYPE",0);
+                    wpt(loc, name, bubble,typ);
                 } else {
                     Picking=intent.getBooleanExtra("PICKING",false);
                     pickWpt=intent.getBooleanExtra("PICKWPT",false);
@@ -383,7 +345,6 @@ public class MainActivity extends AppCompatActivity {
                 BoundingBox bb=map.getBoundingBox();
                 if (bb.contains(pick.getPosition())) return false;
                 GeoPoint corner=bb.getGeoPointOfRelativePositionWithLinearInterpolation(
-//                                0.75f,0.25f);
                         0.25f,0.75f);
                 pick.setPosition(corner);
             }
@@ -397,7 +358,6 @@ public class MainActivity extends AppCompatActivity {
                 BoundingBox bb=map.getBoundingBox();
                 if (bb.contains(pick.getPosition())) return false;
                 GeoPoint corner=bb.getGeoPointOfRelativePositionWithLinearInterpolation(
-//                                0.75f,0.25f);
                         0.25f,0.75f);
                 pick.setPosition(corner);
             }
@@ -409,7 +369,6 @@ public class MainActivity extends AppCompatActivity {
         if (Picking){
             mkPkMe();
             map.addMapListener(mapLstnr);
-//            vInfo.setText("Latitude,Longitude");
         } else {
             map.removeMapListener(mapLstnr);
             if (pick!=null){
@@ -423,7 +382,6 @@ public class MainActivity extends AppCompatActivity {
         if (!map.isLayoutOccurred()) return;
         BoundingBox bb=map.getBoundingBox();
         GeoPoint corner=bb.getGeoPointOfRelativePositionWithLinearInterpolation(
-//                0.75f,0.25f);
                 0.25f,0.75f);
         pick=new Marker(map);
         pick.setIcon(getResources().getDrawable(R.drawable.target));
@@ -443,11 +401,11 @@ public class MainActivity extends AppCompatActivity {
             public void onMarkerDragEnd(Marker marker) {
                 BoundingBox bb=map.getBoundingBox();
                 GeoPoint corner=bb.getGeoPointOfRelativePositionWithLinearInterpolation(
-//                          0.75f,0.25f);
                      0.25f,0.75f);
                 GeoPoint pt=marker.getPosition();
                 nwRteWpt(pt);
                 marker.setPosition(corner);
+                marker.setTitle("Pick me");
                 marker.showInfoWindow();
                 map.invalidate();
                 mvPick=false;
@@ -480,13 +438,21 @@ public class MainActivity extends AppCompatActivity {
         GeoPoint pt=m.getPosition();
         if (prevMark==null || pickWpt){
             info=String.format(Locale.ENGLISH,
-                        "%.6f,%.6f", pt.getLatitude(),pt.getLongitude());
+                        "%.6f°,%.6f°", pt.getLatitude(),pt.getLongitude());
+            m.showInfoWindow();
+            m.setTitle(info);
         } else {
             Double bearing=prevMark.getPosition().bearingTo(pt);
             Double dist=pt.distanceToAsDouble(prevMark.getPosition());
-            info=String.format(Locale.ENGLISH,"%.2f,%.1f",bearing,dist);
+            int index=assocAlt.get(prevMark).index;
+            Double bearing0=frstRteMark.getPosition().bearingTo(pt);
+            Double dist0=pt.distanceToAsDouble(frstRteMark.getPosition());
+            info=String.format(Locale.ENGLISH,"%d: %.2f°,%.1fm",0,bearing0,dist0);
+            String infoN=String.format(Locale.ENGLISH,"%d: %.2f°,%.1fm",
+                    index,bearing,dist);
+            m.showInfoWindow();
+            m.setTitle(infoN+" | "+info);
         }
-        vInfo.setText(info);
     }
 
     void nwRteWpt(GeoPoint pt){
@@ -494,6 +460,7 @@ public class MainActivity extends AppCompatActivity {
         nw.setPosition(pt);
         nw.setIcon(getResources().getDrawable(R.drawable.butterfly));
         nw.setAnchor(Marker.ANCHOR_CENTER,Marker.ANCHOR_CENTER);
+        nw.setAlpha(0.5f);
         final Integer mkIx=pickNb++;
         if (pickWpt){
 //            nw.setTitle("Wpt "+mkIx.toString());
@@ -514,7 +481,9 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onMarkerDragEnd(Marker marker) {
                 marker.setIcon(getResources().getDrawable(R.drawable.butterfly));
+                marker.setAlpha(0.5f);
                 sendPicked(marker);
+                pick.showInfoWindow();
                 map.invalidate();
             }
 
@@ -524,6 +493,7 @@ public class MainActivity extends AppCompatActivity {
                 if (prevMark==null || pickWpt) vInfo.setText("Latitude,Longitude");
                 else vInfo.setText("Bearing,Distance");
                 marker.setIcon(getResources().getDrawable(R.drawable.target));
+                marker.setAlpha(1.0f);
                 map.invalidate();
             }
         });
@@ -606,6 +576,7 @@ public class MainActivity extends AppCompatActivity {
 
     void sendpkd(Marker m){
         DataMark dm=assocAlt.get(m);
+        if (dm.index==0) frstRteMark=m;
         Intent nt=new Intent();
         nt.setAction("org.js.PICKED");
         nt.putExtra("INDEX",dm.index);

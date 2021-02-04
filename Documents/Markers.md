@@ -1,10 +1,15 @@
 # Waypoints
-The waypoints that are specified by the driving application are
-drawn as markers with a form of diabolo on its base.
+The driving application could place waypoints as markers
+at some locations. There are 5 possible forms for the markers:
+red diabolo, small black dot, magenta diabolo, red butterfly
+and black reticle.  
+The butterfly and the reticle should be reserved for internal
+use of Msb2Map.  
+The diabolos and the butterfly are half transparent. They are
+also complementary: they form a square when superposed.
 
 A waypoint positioned by the user while in a picking session
-has a form of butterfly. The diabolo and the butterfly forms
-are complementary and are two halves of a square if they are superposed.
+has a form of butterfly.
 
 Transient waypoints are drawn as a reticle.
 

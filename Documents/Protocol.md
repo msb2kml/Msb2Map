@@ -16,8 +16,6 @@ broadcast intents.
  on this location.
 + Double parameter "**ZOOM**": initial zoom factor for the map.
  The default factor is 15.0.
-+ Boolean parameter "**StartGPS**": if true, display the locations
- stored in the file StartGPS.gpx. True by default.
 + Boolean parameter "**Tail**": if true, the locations received 
   initially through the broadcasts are displayed as a vapor trail,
   otherwise the locations are displayed as a permanent track.
@@ -31,8 +29,11 @@ Once the Msb2Map is launched, the map setup is complete, the
 locations in StartGPS.gpx are displayed if requested and the
 broadcast receiver has been opened, a broadcast is emitted
 to signal the readiness.  
-This broadcast has for action "**org.js.ACK**" and there is an extra
-parameter that is the name of the application (Msb2Map).  
+This broadcast has for action "**org.js.ACK**".  
+There are extra parameters:
++ String parameter "**NAME**": the name of the application (Msb2Map).
++ Integer parameter "**VERSION**": the version code (160).
+
 The driving application could wait for this acknowledgment
 to be sure that no data is lost.
 
@@ -66,11 +67,17 @@ The data is in the extra parameters with 3 cases:
 
 2. The parameter "**WPT**" is present
     + Location parameter "**WPT**": location of a marker to draw on the
-     map with the form of a diabolo.
+     map.
     + String parameter "**WPT\_NAME**": name (bubble) to give to the marker
      drawn for the "**WPT**" parameter.
     + String parameter "**BUBBLE**": string to be written in the information
      field.
+    + Integer parameter "**TYPE**": type of marker to draw:
+        * 0: half-transparent red diabolo (default) 
+        * 1: small black dot
+        * 2: half-transparent magenta diabolo
+        * 3: half-transparent red butterfly (not recommended)
+        * 4: black reticle (not recommended)
 
 3. The parameter "**WPT**" is not present or is null
     + Boolean parameter "**PICKING**": if true start a session of picking
