@@ -59,6 +59,7 @@ public class MainActivity extends AppCompatActivity {
     Double zoom=15.0;
     Float width=4.0f;
     Location center=null;
+    Float Orient=null;
     Marker flyMarker=null;
     GeoPoint geo=null;
     Marker mark=null;
@@ -99,6 +100,9 @@ public class MainActivity extends AppCompatActivity {
         if (center!=null){
             latitude=center.getLatitude();
             longitude=center.getLongitude();
+        }
+        if (intent.hasExtra("ORIENT")){
+            Orient=intent.getFloatExtra("ORIENT",0.0f);
         }
         zoom=intent.getDoubleExtra("ZOOM",zoom);
         Tail=intent.getBooleanExtra("Tail",Tail);
@@ -196,6 +200,7 @@ public class MainActivity extends AppCompatActivity {
         ScaleBarOverlay scale=new ScaleBarOverlay(map);
         scale.setUnitsOfMeasure(ScaleBarOverlay.UnitsOfMeasure.metric);
         map.getOverlays().add(scale);
+        if (Orient!=null) map.setMapOrientation(Orient);
         map.invalidate();
 
         Intent nt=new Intent();
@@ -255,7 +260,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void update(Location loc, Integer color, String bubble,
-                       Boolean startPt, Boolean tail){
+                       Boolean startPt, Boolean tail,Float orient){
         Boolean wthInf=false;
         GeoPoint gp=new GeoPoint(loc.getLatitude(),loc.getLongitude());
         if (startPt){
@@ -307,6 +312,10 @@ public class MainActivity extends AppCompatActivity {
         if (bubble!=null) {
             vInfo.setText(bubble);
         }
+        if (orient!=null){
+            Orient=orient;
+            map.setMapOrientation(Orient);
+        }
     }
 
     private final BroadcastReceiver mReceiver=new BroadcastReceiver() {
@@ -319,7 +328,11 @@ public class MainActivity extends AppCompatActivity {
                 Integer color = intent.getIntExtra("COLOR", Color.BLACK);
                 Boolean startPt=intent.getBooleanExtra("START",false);
                 Boolean tail=intent.getBooleanExtra("Tail",Tail);
-                update(loc, color, bubble,startPt,tail);
+                Float orient=0.0f;
+                if (intent.hasExtra("ORIENT")){
+                    orient=intent.getFloatExtra("ORIENT",orient);
+                } else orient=null;
+                update(loc, color, bubble,startPt,tail,orient);
             } else {
                 loc=(Location) intent.getParcelableExtra("WPT");
                 if (loc!=null) {

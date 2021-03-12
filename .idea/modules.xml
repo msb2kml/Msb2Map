@@ -4,7 +4,7 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/Msb2Map.iml" filepath="$PROJECT_DIR$/Msb2Map.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
-      <module fileurl="file://$PROJECT_DIR$/osmdroid-android-6.1.6/osmdroid-android-6.1.6.iml" filepath="$PROJECT_DIR$/osmdroid-android-6.1.6/osmdroid-android-6.1.6.iml" />
+      <module fileurl="file://$PROJECT_DIR$/osmdroid-android-6.1.10-release/osmdroid-android-6.1.10-release.iml" filepath="$PROJECT_DIR$/osmdroid-android-6.1.10-release/osmdroid-android-6.1.10-release.iml" />
     </modules>
   </component>
 </project>
