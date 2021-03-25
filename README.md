@@ -9,7 +9,8 @@ The driving application could display locations and lines
 for tracks and routes. It could also start a picking session letting
 the user select locations to be processed as waypoints or a route.
 
-The map could be zoomed, panned and rotated with the fingers.
+The map could be zoomed, panned and rotated with the fingers.  
+It could also be rotated by the driving application (like keeping a heading).
 
 It is retrieved through the Internet from the data compiled by
 the [OpenStreetMap](https://www.openstreetmap.org/)

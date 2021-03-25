@@ -33,5 +33,7 @@ There are two possible modes:
  a reticle marker. Taping on this marker shows a bubble with
  the altitude (if available). The map is kept centered on this
  marker. Points and segments received before the last 20 locations
- are erased. This gives the impression of a vanishing vapor trail.
+ are erased. This gives the impression of a vanishing vapor trail.  
+ The driving application could change the orientation of the map
+ for each new location.
 

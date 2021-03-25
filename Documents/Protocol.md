@@ -14,6 +14,9 @@ broadcast intents.
  is "Exit".
 + Location parameter "**CENTER**": the map is initially centered
  on this location.
++ Floating orientation parameter "**ORIENT**": orientation of the map
+ (degrees) relative to the North. The North is at the top if this
+ parameter is not present.
 + Double parameter "**ZOOM**": initial zoom factor for the map.
  The default factor is 15.0.
 + Boolean parameter "**Tail**": if true, the locations received 
@@ -26,13 +29,12 @@ broadcast intents.
 ### Launcher acknowledgment
 
 Once the Msb2Map is launched, the map setup is complete, the
-locations in StartGPS.gpx are displayed if requested and the
 broadcast receiver has been opened, a broadcast is emitted
 to signal the readiness.  
 This broadcast has for action "**org.js.ACK**".  
 There are extra parameters:
 + String parameter "**NAME**": the name of the application (Msb2Map).
-+ Integer parameter "**VERSION**": the version code (160).
++ Integer parameter "**VERSION**": the version code (170).
 
 The driving application could wait for this acknowledgment
 to be sure that no data is lost.
@@ -64,6 +66,9 @@ The data is in the extra parameters with 3 cases:
      field.
     + Integer parameter "**COLOR**": color to draw the segment ending
      at this point. The default is black.
+    + Floating parameter "**ORIENT**": orientation (degrees) of the map
+     relative to the North. The orientation is not changed if this
+     parameter is missing.
 
 2. The parameter "**WPT**" is present
     + Location parameter "**WPT**": location of a marker to draw on the
