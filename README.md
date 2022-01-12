@@ -33,8 +33,7 @@ other sources than Google Play.
 This application make use of the library
 [osmdroid](https://github.com/osmdroid/osmdroid).
 
-The map is provided by the [OpenStreetMap](https://www.openstreetmap.org/)
-Foundation.
+A choice is possible between 3 servers for the map tiles.
 
 # Permission and Android version
 This application should work on Android versions from

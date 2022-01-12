@@ -32,6 +32,8 @@ import org.osmdroid.config.Configuration;
 import org.osmdroid.events.MapListener;
 import org.osmdroid.events.ScrollEvent;
 import org.osmdroid.events.ZoomEvent;
+import org.osmdroid.tileprovider.constants.OpenStreetMapTileProviderConstants;
+import org.osmdroid.tileprovider.modules.MapTileDownloader;
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
 import org.osmdroid.util.BoundingBox;
 import org.osmdroid.util.GeoPoint;
@@ -42,6 +44,7 @@ import org.osmdroid.views.overlay.Polyline;
 import org.osmdroid.views.overlay.ScaleBarOverlay;
 import org.osmdroid.views.overlay.gestures.RotationGestureOverlay;
 
+import java.io.File;
 import java.text.NumberFormat;
 import java.text.ParseException;
 import java.util.HashMap;
@@ -54,6 +57,7 @@ public class MainActivity extends AppCompatActivity {
     MapView map=null;
     Context ctx;
     String exPath= Environment.getExternalStorageDirectory().getAbsolutePath();
+    int sourceMap=0;
     Double latitude=48.8583;
     Double longitude=2.2944;
     Double zoom=15.0;
@@ -67,6 +71,7 @@ public class MainActivity extends AppCompatActivity {
     IntentFilter filter=new IntentFilter("org.js.LOC");
     Boolean listening=false;
     Button bMsb2And;
+    Button bMap;
     TextView vInfo;
     String caller=null;
     GeoPoint prevGeoPt=null;
@@ -106,6 +111,8 @@ public class MainActivity extends AppCompatActivity {
         }
         zoom=intent.getDoubleExtra("ZOOM",zoom);
         Tail=intent.getBooleanExtra("Tail",Tail);
+        int source=intent.getIntExtra("SOURCE",-1);
+        if (source>=0 && source<3) sourceMap=source;
         int wPix = Resources.getSystem().getDisplayMetrics().widthPixels;
         int hPix = Resources.getSystem().getDisplayMetrics().heightPixels;
         if (wPix>1024 || hPix>1024) width=6.0f;
@@ -116,6 +123,7 @@ public class MainActivity extends AppCompatActivity {
 
     void fetchPref(){
         SharedPreferences pref=ctx.getSharedPreferences(ctx.getString(R.string.PrefName),0);
+        sourceMap=pref.getInt("SOURCE",0);
         Float fZoom=pref.getFloat("ZOOM",zoom.floatValue());
         zoom=fZoom.doubleValue();
         Float fLat=pref.getFloat("LATITUDE",latitude.floatValue());
@@ -127,6 +135,7 @@ public class MainActivity extends AppCompatActivity {
     void putPref(){
         SharedPreferences pref=ctx.getSharedPreferences(ctx.getString(R.string.PrefName),0);
         SharedPreferences.Editor edit=pref.edit();
+        edit.putInt("SOURCE",sourceMap);
         edit.putFloat("ZOOM",zoom.floatValue());
         edit.putFloat("LATITUDE",latitude.floatValue());
         edit.putFloat("LONGITUDE",longitude.floatValue());
@@ -154,7 +163,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void launchMsb2And(){
-
         if (map!=null){
             zoom=map.getZoomLevelDouble();
             IGeoPoint cntr=map.getMapCenter();
@@ -171,10 +179,47 @@ public class MainActivity extends AppCompatActivity {
         } else finish();
     }
 
+    void selMap(){
+        String theList[]={"OpenTopoMap (opentopomap.org)",
+                          "MAPNIK (openstreetmap.org)",
+                          "WIKIMEDIA (maps.wikimedia.org)"
+
+                          };
+        AlertDialog.Builder build=new AlertDialog.Builder(this);
+        build.setTitle("Select a map tiles provider");
+        build.setItems(theList, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                sourceMap=which;
+                chgMap();
+            }
+        });
+        String[] def=theList[sourceMap].split(" ");
+        build.setNeutralButton(def[0], new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+
+            }
+        });
+        build.show();
+    }
+
+    void chgMap(){
+        if (map==null) return;
+        if (sourceMap==1) map.setTileSource(TileSourceFactory.MAPNIK);
+        else if (sourceMap==2) map.setTileSource(TileSourceFactory.WIKIMEDIA);
+        else {
+            map.setTileSource(TileSourceFactory.OpenTopo);
+            sourceMap=0;
+        }
+        map.invalidate();
+    }
+
     public void strtMap(){
         map=(MapView) findViewById(R.id.map);
         bMsb2And=(Button) findViewById(R.id.msb2and);
         vInfo=(TextView) findViewById(R.id.vInfo);
+        bMap=(Button) findViewById(R.id.mapSel);
         if (caller==null){
             bMsb2And.setText("Exit");
         } else {
@@ -186,7 +231,18 @@ public class MainActivity extends AppCompatActivity {
                 launchMsb2And();
             }
         });
-        map.setTileSource(TileSourceFactory.OpenTopo);
+        if (sourceMap==1) map.setTileSource(TileSourceFactory.MAPNIK);
+        else if (sourceMap==2) map.setTileSource(TileSourceFactory.WIKIMEDIA);
+        else {
+            map.setTileSource(TileSourceFactory.OpenTopo);
+            sourceMap=0;
+        }
+        bMap.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                selMap();
+            }
+        });
         Configuration.getInstance().setUserAgentValue(BuildConfig.APPLICATION_ID);
         RotationGestureOverlay mRotationGestureOverlay = new RotationGestureOverlay(map);
         mRotationGestureOverlay.setEnabled(true);
@@ -202,7 +258,6 @@ public class MainActivity extends AppCompatActivity {
         map.getOverlays().add(scale);
         if (Orient!=null) map.setMapOrientation(Orient);
         map.invalidate();
-
         Intent nt=new Intent();
         nt.setAction("org.js.ACK");
         nt.putExtra("NAME",getResources().getString(R.string.app_name));
@@ -584,8 +639,6 @@ public class MainActivity extends AppCompatActivity {
             sendpkd(m);
         }
     }
-
-
 
     void sendpkd(Marker m){
         DataMark dm=assocAlt.get(m);

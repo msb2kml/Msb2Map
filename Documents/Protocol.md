@@ -24,6 +24,11 @@ broadcast intents.
   otherwise the locations are displayed as a permanent track.
   True by default. The mode could be changed at the start of
   a new line.
++ Integer parameter "**SOURCE**": index of the provider to use
+  for retrieving the map tiles.  
+  0, 1 or 2 respectively for OpenTopoMap, MAPNIK or WIKIMEDIA.
+  The default is the previously used
+  or OpenTopoMap.
 
 
 ### Launcher acknowledgment

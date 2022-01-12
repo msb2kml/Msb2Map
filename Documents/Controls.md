@@ -1,3 +1,22 @@
+# Map provider
+
+The "**Map**" button on the lower left corner of the screen lets you
+select from which server the map tiles are retrieved.  
+
+![Map](Gallery/Map.jpg)
+
+The providers are:
+
++ [OpenTopoMap](https://www.opentopomap.org)
++ [Mapnik](https://www.openstreetmap.org)
++ [WikiMedia](https://maps.wikimedia.org/)
+
+Each of the servers has a free access but the accessibility
+and the level of detail could vary.
+
+The selection of provider is saved in the preferences to be used
+at the next invocation. The default is OpenTopoMap.
+
 # Map movement
 
 The map could be moved by the driving application but the user
